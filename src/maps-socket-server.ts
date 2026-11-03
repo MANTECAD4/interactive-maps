@@ -1,5 +1,6 @@
 import { IncomingMessage } from "http";
 import { WebSocketServer, WebSocket } from "ws";
+import { RegisterUserData } from "./dtos";
 
 interface OptionsWss {
   port: number;
@@ -31,9 +32,10 @@ export class MapsSocketServer {
   private registerUser = (
     ws: WebSocket,
     req: IncomingMessage,
+    user: RegisterUserData,
   ): { channelId: string; clientId: string } => {
     const clientId = crypto.randomUUID();
-    ws.id = clientId;
+    ws.user = { id: clientId, name: "", coordinates: { lat: 1, lon: 1 } };
     const channelId =
       new URL(req.url!, `http://${req.headers.host}`).searchParams.get(
         "channelId",
@@ -48,7 +50,20 @@ export class MapsSocketServer {
 
   private configureServer = () => {
     this.wss.on("connection", (ws: WebSocket, req) => {
-      const { channelId, clientId } = this.registerUser(ws, req);
+      // !TODO - implement helper for user data extraction from
+      const registerUserData: RegisterUserData = {
+        coordinates: {
+          lon: 0,
+          lat: 0,
+        },
+        name: "",
+        color: "",
+      };
+      const { channelId, clientId } = this.registerUser(
+        ws,
+        req,
+        registerUserData,
+      );
 
       ws.send(`Welcome!! Your id is ${clientId}`);
 
