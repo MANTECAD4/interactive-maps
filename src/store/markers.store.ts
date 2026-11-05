@@ -1,4 +1,5 @@
-import { ClientMarker, Coordinates, RegisterClientDto } from "../dtos";
+import { ClientMarker, Coordinates } from "../dtos";
+import { RegisterClientDto } from "../dtos/requests.dtos";
 
 export class MarkersStore {
   private markers: ClientMarker[] = [];
@@ -14,7 +15,7 @@ export class MarkersStore {
 
   public add = (data: RegisterClientDto): ClientMarker => {
     const id = crypto.randomUUID();
-    const marker: ClientMarker = { ...data, id };
+    const marker: ClientMarker = { ...data, id, updatedAt: new Date() };
     this.markers.push(marker);
     return marker;
   };
@@ -27,15 +28,17 @@ export class MarkersStore {
   public moveMarkerCoordinates = (
     id: string,
     newCoordinates: Coordinates,
-  ): ClientMarker => {
+  ): Omit<ClientMarker, "name" | "color"> => {
     const prevStatusMarker = this.findById(id);
-    if (!prevStatusMarker) throw new Error(`Marker with id ${id} not found`);
+    if (!prevStatusMarker)
+      throw new Error(`Error on update - Marker with id ${id} not found`);
 
     const newStatusMarker: ClientMarker = {
       ...prevStatusMarker,
       updatedAt: new Date(),
       coordinates: newCoordinates,
     };
+
     this.markers = this.markers.map((marker) => {
       if (marker.id === id) {
         return newStatusMarker;
@@ -43,6 +46,8 @@ export class MarkersStore {
       return marker;
     });
 
-    return newStatusMarker;
+    const { color, name, ...rest } = newStatusMarker;
+
+    return rest;
   };
 }

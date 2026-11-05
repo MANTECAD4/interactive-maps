@@ -4,5 +4,6 @@ import { WebSocketPayload } from "./dtos";
 declare module "ws" {
   interface WebSocket {
     user: WebSocketPayload;
+    channelId: string;
   }
 }

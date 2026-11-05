@@ -1,6 +1,8 @@
 import { IncomingMessage } from "http";
 import { WebSocketServer, WebSocket } from "ws";
-import { RegisterUserData } from "./dtos";
+import { WebSocketPayload } from "./dtos";
+import { MarkersController } from "./controllers/markers.controller";
+import { ResponseMessage } from "./dtos/responses.dtos";
 
 interface OptionsWss {
   port: number;
@@ -10,6 +12,7 @@ interface OptionsWss {
 
 export class MapsSocketServer {
   private wss: WebSocketServer;
+  private readonly markersController = new MarkersController();
   private channels: Map<string, Set<WebSocket>> = new Map();
   public defaultChannel: string;
   public port: number;
@@ -32,47 +35,61 @@ export class MapsSocketServer {
   private registerUser = (
     ws: WebSocket,
     req: IncomingMessage,
-    user: RegisterUserData,
-  ): { channelId: string; clientId: string } => {
-    const clientId = crypto.randomUUID();
-    ws.user = { id: clientId, name: "", coordinates: { lat: 1, lon: 1 } };
+    user: WebSocketPayload,
+  ): void => {
+    ws.user = user;
     const channelId =
       new URL(req.url!, `http://${req.headers.host}`).searchParams.get(
         "channelId",
       ) || this.defaultChannel;
-    if (this.channels.get(channelId)) {
+    if (!this.channels.get(channelId)) {
       this.channels.set(channelId, new Set());
     }
     this.channels.get(channelId)?.add(ws);
-    console.log(`Client ${clientId} connected to channel ${channelId}`);
-    return { channelId, clientId };
+    ws.channelId = channelId;
+    console.log(`Client ${user.id} connected to channel ${channelId}`);
   };
 
   private configureServer = () => {
-    this.wss.on("connection", (ws: WebSocket, req) => {
-      // !TODO - implement helper for user data extraction from
-      const registerUserData: RegisterUserData = {
-        coordinates: {
-          lon: 0,
-          lat: 0,
-        },
-        name: "",
-        color: "",
-      };
-      const { channelId, clientId } = this.registerUser(
-        ws,
-        req,
-        registerUserData,
-      );
-
-      ws.send(`Welcome!! Your id is ${clientId}`);
-
+    this.wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
       ws.on("close", () => {
-        console.log(`User ${clientId} disconnected`);
+        if (ws.user) {
+          const result = this.markersController.handleRemoveClient({
+            id: ws.user.id,
+          });
+          const channel = this.channels.get(ws.channelId);
+          if (channel === undefined) return;
+          result.broadcast.forEach((broadCastMessage) => {
+            channel.forEach((client) => {
+              if (ws.user.id !== client.user.id) {
+                client.send(JSON.stringify(broadCastMessage));
+              }
+            });
+          });
+          channel.delete(ws);
+          console.log(`User ${ws.user.id} disconnected`);
+        }
       });
 
       ws.on("message", (rawRequestMessage: string) => {
-        console.log({ rawRequestMessage });
+        const result = this.markersController.handleMessage(rawRequestMessage);
+        result.personal.forEach((personalMessage) => {
+          if (personalMessage.type === ResponseMessage.WELCOME) {
+            this.registerUser(
+              ws,
+              req,
+              personalMessage.payload.clientMarker as WebSocketPayload,
+            );
+          }
+          ws.send(JSON.stringify(personalMessage));
+        });
+        result.broadcast.forEach((broadcastMessage) => {
+          this.channels.get(ws.channelId)?.forEach((client) => {
+            if (ws.user.id !== client.user.id) {
+              client.send(JSON.stringify(broadcastMessage));
+            }
+          });
+        });
       });
     });
   };
