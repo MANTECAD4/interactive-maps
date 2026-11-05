@@ -3,7 +3,6 @@ import {
   RequestMessage,
   WebSocketRequestMessage,
   WebSocketRequestSchema,
-  WithIdDto,
 } from "../dtos/requests.dtos";
 import {
   ResponseMessage,
@@ -11,29 +10,26 @@ import {
   WebSocketResponseMessage,
 } from "../dtos/responses.dtos";
 import { MarkersService } from "../services/markers.service";
+import { WebSocketPayload } from "../dtos";
 
 export class MarkersController {
   private readonly markersService = new MarkersService();
-  public handleMessage = (rawMessage: string): WebSocketResponse => {
+  public handleMessage = (
+    rawMessage: string,
+    user: WebSocketPayload | undefined,
+  ): WebSocketResponse => {
     try {
       const request: WebSocketRequestMessage = JSON.parse(rawMessage);
       const { data: checkedRequest, error } =
         WebSocketRequestSchema.safeParse(request);
       if (error) {
-        return {
-          personal: [
-            {
-              type: ResponseMessage.ERROR,
-              error: {
-                message: `Invalid request: ${z.treeifyError(error).errors.join(", ")}`,
-              },
-            },
-          ],
-          broadcast: [],
-        };
+        return this.handleError(
+          `Invalid request: ${error.issues.map((issue) => issue.message).join(", ")}`,
+        );
       }
       switch (checkedRequest.type) {
         case RequestMessage.GET_CLIENT_MARKERS: {
+          if (!user) return this.handleError("User not registered");
           const result = this.markersService.getAll(null);
           const sendMarkersMessage: WebSocketResponseMessage = {
             type: ResponseMessage.CLIENT_MARKERS_LIST,
@@ -43,27 +39,38 @@ export class MarkersController {
         }
 
         case RequestMessage.REGISTER_CLIENT: {
-          const result = this.markersService.add(checkedRequest.payload);
+          const newClientMarker = this.markersService.add(
+            checkedRequest.payload,
+          );
+          const markersList = this.markersService.getAll(null);
           const welcomeMessage: WebSocketResponseMessage = {
             type: ResponseMessage.WELCOME,
             payload: {
-              clientMarker: result,
+              clientMarker: newClientMarker,
+            },
+          };
+          const markersListMessage: WebSocketResponseMessage = {
+            type: ResponseMessage.CLIENT_MARKERS_LIST,
+            payload: {
+              clientMarkers: markersList,
             },
           };
           const clientJoinedMessage: WebSocketResponseMessage = {
             type: ResponseMessage.CLIENT_JOINED,
             payload: {
-              clientMarker: result,
+              clientMarker: newClientMarker,
             },
           };
           return {
-            personal: [welcomeMessage],
+            personal: [welcomeMessage, markersListMessage],
             broadcast: [clientJoinedMessage],
           };
         }
 
         case RequestMessage.MOVE_CLIENT: {
+          if (!user) return this.handleError("User not registered");
           const result = this.markersService.moveMarkerCoordinates(
+            user.id,
             checkedRequest.payload,
           );
 
@@ -75,35 +82,29 @@ export class MarkersController {
         }
 
         default:
-          return {
-            personal: [
-              {
-                type: ResponseMessage.ERROR,
-                error: {
-                  message: `Request message ${checkedRequest.type} not identified`,
-                },
-              },
-            ],
-            broadcast: [],
-          };
+          return this.handleError(
+            `Request message ${checkedRequest.type} not identified`,
+          );
       }
     } catch (error) {
-      return {
-        personal: [
-          {
-            type: ResponseMessage.ERROR,
-            error: {
-              message: (error as any).message ?? "Invalid request",
-            },
-          },
-        ],
-        broadcast: [],
-      };
+      return this.handleError((error as any).message ?? "Invalid request");
     }
   };
 
-  public handleRemoveClient = (payload: WithIdDto) => {
-    const result = this.markersService.delete(payload);
+  private handleError = (errorMessage: string): WebSocketResponse => ({
+    personal: [
+      {
+        type: ResponseMessage.ERROR,
+        error: {
+          message: errorMessage,
+        },
+      },
+    ],
+    broadcast: [],
+  });
+
+  public handleRemoveClient = (clientId: string) => {
+    const result = this.markersService.delete(clientId);
     const clientLeftMessage: WebSocketResponseMessage = {
       type: ResponseMessage.CLIENT_LEFT,
       payload: { id: result },

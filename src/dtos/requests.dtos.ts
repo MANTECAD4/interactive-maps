@@ -17,16 +17,17 @@ export const MoveClientSchema = ClientMarkerSchema.omit({
   updatedAt: true,
   color: true,
   name: true,
+  id: true,
 });
 
-export const WithIdSchema = z.object({
-  id: z.uuid(),
-});
+// export const WithIdSchema = z.object({
+//   id: z.uuid(),
+// });
 
 export const WebSocketRequestSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal(RequestMessage.GET_CLIENT_MARKERS),
-    payload: z.undefined().optional(),
+    payload: z.null().optional(),
   }),
   z.object({
     type: z.literal(RequestMessage.REGISTER_CLIENT),
@@ -38,7 +39,7 @@ export const WebSocketRequestSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal(RequestMessage.DELETE_CLIENT),
-    payload: WithIdSchema,
+    payload: z.null().optional(),
   }),
 ]);
 
@@ -46,8 +47,8 @@ export type WebSocketRequestMessage = z.infer<typeof WebSocketRequestSchema>;
 
 export type RegisterClientDto = z.infer<typeof RegisterClientSchema>;
 export type MoveClientDto = z.infer<typeof MoveClientSchema>;
-export type DeleteClientDto = z.infer<typeof WithIdSchema>;
-export type WithIdDto = z.infer<typeof WithIdSchema>;
+// export type DeleteClientDto = z.infer<typeof WithIdSchema>;
+// export type WithIdDto = z.infer<typeof WithIdSchema>;
 // export type GetClientsRequest = Extract<
 //   WebSocketRequestMessage,
 //   { type: RequestMessage.GET_CLIENT_MARKERS }

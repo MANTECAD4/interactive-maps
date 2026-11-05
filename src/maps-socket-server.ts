@@ -54,14 +54,12 @@ export class MapsSocketServer {
     this.wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
       ws.on("close", () => {
         if (ws.user) {
-          const result = this.markersController.handleRemoveClient({
-            id: ws.user.id,
-          });
+          const result = this.markersController.handleRemoveClient(ws.user.id);
           const channel = this.channels.get(ws.channelId);
           if (channel === undefined) return;
           result.broadcast.forEach((broadCastMessage) => {
             channel.forEach((client) => {
-              if (ws.user.id !== client.user.id) {
+              if (ws.user!.id !== client.user!.id) {
                 client.send(JSON.stringify(broadCastMessage));
               }
             });
@@ -72,7 +70,10 @@ export class MapsSocketServer {
       });
 
       ws.on("message", (rawRequestMessage: string) => {
-        const result = this.markersController.handleMessage(rawRequestMessage);
+        const result = this.markersController.handleMessage(
+          rawRequestMessage,
+          ws.user,
+        );
         result.personal.forEach((personalMessage) => {
           if (personalMessage.type === ResponseMessage.WELCOME) {
             this.registerUser(
@@ -85,7 +86,7 @@ export class MapsSocketServer {
         });
         result.broadcast.forEach((broadcastMessage) => {
           this.channels.get(ws.channelId)?.forEach((client) => {
-            if (ws.user.id !== client.user.id) {
+            if (ws.user!.id !== client.user!.id) {
               client.send(JSON.stringify(broadcastMessage));
             }
           });

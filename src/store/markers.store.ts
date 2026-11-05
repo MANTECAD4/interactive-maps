@@ -2,26 +2,26 @@ import { ClientMarker, Coordinates } from "../dtos";
 import { RegisterClientDto } from "../dtos/requests.dtos";
 
 export class MarkersStore {
-  private markers: ClientMarker[] = [];
+  private markers: Map<string, ClientMarker> = new Map();
 
   public getAll = (): ClientMarker[] => {
-    return this.markers;
+    return Array.from(this.markers.values());
   };
 
   public findById = (id: string): ClientMarker | null => {
-    const marker = this.markers.find((marker) => marker.id === id);
+    const marker = this.markers.get(id);
     return marker ?? null;
   };
 
   public add = (data: RegisterClientDto): ClientMarker => {
     const id = crypto.randomUUID();
     const marker: ClientMarker = { ...data, id, updatedAt: new Date() };
-    this.markers.push(marker);
+    this.markers.set(id, marker);
     return marker;
   };
 
   public delete = (id: string): string => {
-    this.markers = this.markers.filter((marker) => marker.id !== id);
+    this.markers.delete(id);
     return id;
   };
 
@@ -39,12 +39,7 @@ export class MarkersStore {
       coordinates: newCoordinates,
     };
 
-    this.markers = this.markers.map((marker) => {
-      if (marker.id === id) {
-        return newStatusMarker;
-      }
-      return marker;
-    });
+    this.markers.set(id, newStatusMarker);
 
     const { color, name, ...rest } = newStatusMarker;
 

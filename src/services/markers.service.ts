@@ -1,11 +1,7 @@
 import z from "zod";
 import { ClientMarker } from "../dtos";
 import { MarkersStore } from "../store/markers.store";
-import {
-  MoveClientDto,
-  RegisterClientDto,
-  WithIdDto,
-} from "../dtos/requests.dtos";
+import { MoveClientDto, RegisterClientDto } from "../dtos/requests.dtos";
 
 export class MarkersService {
   private readonly markersStore = new MarkersStore();
@@ -14,10 +10,10 @@ export class MarkersService {
     return this.markersStore.getAll();
   };
 
-  public findById = (payload: WithIdDto): ClientMarker => {
-    const marker = this.markersStore.findById(payload.id);
+  public findById = (id: string): ClientMarker => {
+    const marker = this.markersStore.findById(id);
     if (!marker) {
-      throw new Error(`Marker with id ${payload.id} not found`);
+      throw new Error(`Marker with id ${id} not found`);
     }
     return marker;
   };
@@ -27,32 +23,33 @@ export class MarkersService {
     return newMarker;
   };
 
-  public delete = (payload: WithIdDto): string => {
-    const marker = this.markersStore.findById(payload.id);
+  public delete = (id: string): string => {
+    const marker = this.markersStore.findById(id);
 
     if (!marker) {
       throw new Error(
-        `Error while deleting client: client with id ${payload.id} not found`,
+        `Error while deleting client: client with id ${id} not found`,
       );
     }
 
-    this.markersStore.delete(payload.id);
-    return payload.id;
+    this.markersStore.delete(id);
+    return id;
   };
 
   public moveMarkerCoordinates = (
-    payload: MoveClientDto,
+    id: string,
+    { coordinates }: MoveClientDto,
   ): Omit<ClientMarker, "name" | "color"> => {
-    const marker = this.markersStore.findById(payload.id);
+    const marker = this.markersStore.findById(id);
 
     if (!marker) {
       throw new Error(
-        `Error while MOVING client: client with id ${payload.id} not found`,
+        `Error while MOVING client: client with id ${id} not found`,
       );
     }
     const markerUpdated = this.markersStore.moveMarkerCoordinates(
-      payload.id,
-      payload.coordinates,
+      id,
+      coordinates,
     );
     return markerUpdated;
   };
