@@ -11,7 +11,7 @@ export const ClientMarkerSchema = z.object({
   name: z.string().min(3),
   coordinates: CoordinatesSchema,
   color: z.string(),
-  updatedAt: z.date(),
+  updatedAt: z.coerce.date(),
 });
 export type ClientMarker = z.infer<typeof ClientMarkerSchema>;
 

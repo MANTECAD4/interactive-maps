@@ -75,16 +75,16 @@ export class MapsSocketServer {
           ws.user,
         );
         result.personal.forEach((personalMessage) => {
-          if (personalMessage.type === ResponseMessage.WELCOME) {
-            this.registerUser(
-              ws,
-              req,
-              personalMessage.payload.clientMarker as WebSocketPayload,
-            );
-          }
           ws.send(JSON.stringify(personalMessage));
         });
         result.broadcast.forEach((broadcastMessage) => {
+          if (broadcastMessage.type === ResponseMessage.CLIENT_JOINED) {
+            this.registerUser(ws, req, {
+              id: broadcastMessage.payload.clientMarker.id,
+              name: broadcastMessage.payload.clientMarker.name,
+              coordinates: broadcastMessage.payload.clientMarker.coordinates,
+            });
+          }
           this.channels.get(ws.channelId)?.forEach((client) => {
             if (ws.user!.id !== client.user!.id) {
               client.send(JSON.stringify(broadcastMessage));

@@ -1,11 +1,12 @@
 import { ClientMarker, Coordinates } from "../dtos";
-import { RegisterClientDto } from "../dtos/requests.dtos";
 
 export class MarkersStore {
   private markers: Map<string, ClientMarker> = new Map();
 
-  public getAll = (): ClientMarker[] => {
-    return Array.from(this.markers.values());
+  public getAll = (hostId: string): ClientMarker[] => {
+    return Array.from(this.markers.values()).filter(
+      (marker) => marker.id !== hostId,
+    );
   };
 
   public findById = (id: string): ClientMarker | null => {
@@ -13,11 +14,9 @@ export class MarkersStore {
     return marker ?? null;
   };
 
-  public add = (data: RegisterClientDto): ClientMarker => {
-    const id = crypto.randomUUID();
-    const marker: ClientMarker = { ...data, id, updatedAt: new Date() };
-    this.markers.set(id, marker);
-    return marker;
+  public add = (client: ClientMarker): ClientMarker => {
+    this.markers.set(client.id, client);
+    return client;
   };
 
   public delete = (id: string): string => {
@@ -28,6 +27,7 @@ export class MarkersStore {
   public moveMarkerCoordinates = (
     id: string,
     newCoordinates: Coordinates,
+    updatedAt: Date,
   ): Omit<ClientMarker, "name" | "color"> => {
     const prevStatusMarker = this.findById(id);
     if (!prevStatusMarker)
@@ -35,7 +35,7 @@ export class MarkersStore {
 
     const newStatusMarker: ClientMarker = {
       ...prevStatusMarker,
-      updatedAt: new Date(),
+      updatedAt,
       coordinates: newCoordinates,
     };
 

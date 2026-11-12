@@ -30,7 +30,7 @@ export class MarkersController {
       switch (checkedRequest.type) {
         case RequestMessage.GET_CLIENT_MARKERS: {
           if (!user) return this.handleError("User not registered");
-          const result = this.markersService.getAll(null);
+          const result = this.markersService.getAll(user.id);
           const sendMarkersMessage: WebSocketResponseMessage = {
             type: ResponseMessage.CLIENT_MARKERS_LIST,
             payload: { clientMarkers: result },
@@ -39,16 +39,17 @@ export class MarkersController {
         }
 
         case RequestMessage.REGISTER_CLIENT: {
+          if (user) return this.handleError("User already registered");
           const newClientMarker = this.markersService.add(
             checkedRequest.payload,
           );
-          const markersList = this.markersService.getAll(null);
-          const welcomeMessage: WebSocketResponseMessage = {
-            type: ResponseMessage.WELCOME,
-            payload: {
-              clientMarker: newClientMarker,
-            },
-          };
+          const markersList = this.markersService.getAll(newClientMarker.id);
+          // const welcomeMessage: WebSocketResponseMessage = {
+          //   type: ResponseMessage.WELCOME,
+          //   payload: {
+          //     clientMarker: newClientMarker,
+          //   },
+          // };
           const markersListMessage: WebSocketResponseMessage = {
             type: ResponseMessage.CLIENT_MARKERS_LIST,
             payload: {
@@ -62,7 +63,7 @@ export class MarkersController {
             },
           };
           return {
-            personal: [welcomeMessage, markersListMessage],
+            personal: [markersListMessage /* welcomeMessage */],
             broadcast: [clientJoinedMessage],
           };
         }

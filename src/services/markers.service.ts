@@ -1,24 +1,21 @@
 import z from "zod";
 import { ClientMarker } from "../dtos";
 import { MarkersStore } from "../store/markers.store";
-import { MoveClientDto, RegisterClientDto } from "../dtos/requests.dtos";
+import { MoveClientDto } from "../dtos/requests.dtos";
 
 export class MarkersService {
   private readonly markersStore = new MarkersStore();
 
-  public getAll = (_payload: unknown): ClientMarker[] => {
-    return this.markersStore.getAll();
+  public getAll = (hostId: string): ClientMarker[] => {
+    return this.markersStore.getAll(hostId);
   };
 
-  public findById = (id: string): ClientMarker => {
+  public findById = (id: string): ClientMarker | null => {
     const marker = this.markersStore.findById(id);
-    if (!marker) {
-      throw new Error(`Marker with id ${id} not found`);
-    }
     return marker;
   };
 
-  public add = (payload: RegisterClientDto): ClientMarker => {
+  public add = (payload: ClientMarker): ClientMarker => {
     const newMarker = this.markersStore.add(payload);
     return newMarker;
   };
@@ -38,7 +35,7 @@ export class MarkersService {
 
   public moveMarkerCoordinates = (
     id: string,
-    { coordinates }: MoveClientDto,
+    { coordinates, updatedAt }: MoveClientDto,
   ): Omit<ClientMarker, "name" | "color"> => {
     const marker = this.markersStore.findById(id);
 
@@ -50,6 +47,7 @@ export class MarkersService {
     const markerUpdated = this.markersStore.moveMarkerCoordinates(
       id,
       coordinates,
+      updatedAt,
     );
     return markerUpdated;
   };

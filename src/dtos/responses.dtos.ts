@@ -6,7 +6,7 @@ export enum ResponseMessage {
   "CLIENT_JOINED" = "CLIENT_JOINED",
   "CLIENT_LEFT" = "CLIENT_LEFT",
   "CLIENT_MOVED" = "CLIENT_MOVED",
-  "WELCOME" = "WELCOME",
+  // "WELCOME" = "WELCOME",
   "ERROR" = "ERROR",
 }
 
@@ -22,12 +22,12 @@ export type WebSocketResponseMessage =
         message: string;
       };
     }
-  | {
-      type: ResponseMessage.WELCOME;
-      payload: {
-        clientMarker: ClientMarker;
-      };
-    }
+  // | {
+  //     type: ResponseMessage.WELCOME;
+  //     payload: {
+  //       clientMarker: ClientMarker;
+  //     };
+  //   }
   | {
       type: ResponseMessage.CLIENT_MARKERS_LIST;
       payload: { clientMarkers: ClientMarker[] };
