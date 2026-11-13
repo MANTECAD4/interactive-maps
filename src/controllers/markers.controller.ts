@@ -1,4 +1,3 @@
-import z from "zod";
 import {
   RequestMessage,
   WebSocketRequestMessage,
@@ -11,6 +10,7 @@ import {
 } from "../dtos/responses.dtos";
 import { MarkersService } from "../services/markers.service";
 import { WebSocketPayload } from "../dtos";
+import z from "zod";
 
 export class MarkersController {
   private readonly markersService = new MarkersService();
@@ -23,9 +23,7 @@ export class MarkersController {
       const { data: checkedRequest, error } =
         WebSocketRequestSchema.safeParse(request);
       if (error) {
-        return this.handleError(
-          `Invalid request: ${error.issues.map((issue) => issue.message).join(", ")}`,
-        );
+        return this.handleError(`Invalid request: ${z.prettifyError(error)}`);
       }
       switch (checkedRequest.type) {
         case RequestMessage.GET_CLIENT_MARKERS: {
@@ -44,12 +42,7 @@ export class MarkersController {
             checkedRequest.payload,
           );
           const markersList = this.markersService.getAll(newClientMarker.id);
-          // const welcomeMessage: WebSocketResponseMessage = {
-          //   type: ResponseMessage.WELCOME,
-          //   payload: {
-          //     clientMarker: newClientMarker,
-          //   },
-          // };
+
           const markersListMessage: WebSocketResponseMessage = {
             type: ResponseMessage.CLIENT_MARKERS_LIST,
             payload: {
@@ -88,6 +81,7 @@ export class MarkersController {
           );
       }
     } catch (error) {
+      console.log({ error });
       return this.handleError((error as any).message ?? "Invalid request");
     }
   };
@@ -96,9 +90,7 @@ export class MarkersController {
     personal: [
       {
         type: ResponseMessage.ERROR,
-        error: {
-          message: errorMessage,
-        },
+        message: errorMessage,
       },
     ],
     broadcast: [],

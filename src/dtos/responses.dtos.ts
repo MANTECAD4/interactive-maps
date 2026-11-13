@@ -18,9 +18,7 @@ export interface WebSocketResponse {
 export type WebSocketResponseMessage =
   | {
       type: ResponseMessage.ERROR;
-      error: {
-        message: string;
-      };
+      message: string;
     }
   // | {
   //     type: ResponseMessage.WELCOME;
